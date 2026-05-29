@@ -3,8 +3,8 @@ import OptionButton from "../OptionButton";
 import { HEADACHES_DM, HEADACHES_COMP } from "@/lib/quizContent";
 
 /**
- * Step 1 — biggest headache. The list + sub-copy branch on whether the barber
- * is already on a competitor app (Booksy/Fresha) vs DMs/paper.
+ * Step 1 — biggest headache. The option list branches on whether the barber is
+ * already on a competitor app (Booksy/Fresha/Other) vs DMs/paper. No subtitle.
  */
 export default function HeadacheScreen({
   isComp,
@@ -23,11 +23,6 @@ export default function HeadacheScreen({
       <h1 className="text-heading font-bold text-ink">
         What&apos;s your biggest headache?
       </h1>
-      <p className="mt-2 text-subtitle text-muted">
-        {isComp
-          ? "The stuff barbers usually leave their current app over."
-          : "Pick the one that bugs you most."}
-      </p>
       <div className="mt-5 flex flex-col gap-2">
         {headaches.map(({ label, emoji }) => (
           <OptionButton
