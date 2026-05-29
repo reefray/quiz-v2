@@ -13,7 +13,6 @@ import { TAKEN, COMP_METHODS } from "@/lib/quizContent";
 import { track, identify, setPerson, metaLead, metaTrackCustom, storeFromUA } from "@/lib/analytics";
 import { insertLead } from "@/lib/leads";
 
-const TOTAL_STEPS = 7; // 0..6
 const HOLD_SECONDS = 24 * 3600 - 12;
 const STEP_NAMES = [
   "booking_method",
@@ -35,6 +34,16 @@ const newSessionId = () => {
 
 /** Owns all funnel state + branching + analytics, renders the active step. */
 export default function QuizFlow() {
+  // A/B toggle for the gift step. When false, the reserve step routes straight to
+  // success and the gift screen is skipped (the progress denominator drops by one
+  // so the bar still reaches 100%). Flip to true to restore reserve → gift →
+  // success. All gift code below stays intact either way. Later: swap this literal
+  // for a per-user assignment (feature flag / experiment hook) — everything
+  // downstream derives from it.
+  const SHOW_GIFT: boolean = false;
+  // Step indices actually shown; gift (5) drops out when SHOW_GIFT is false.
+  const STEP_FLOW = SHOW_GIFT ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 6];
+
   const [step, setStep] = useState(0);
   const [method, setMethod] = useState<string | null>(null);
   const [otherSystem, setOtherSystem] = useState(""); // typed value when method === 'other'
@@ -60,6 +69,7 @@ export default function QuizFlow() {
 
   const isComp = method ? COMP_METHODS.includes(method) : false;
   const cleanHandle = cleanise(handle) || "yourname";
+  const stepIndex = Math.max(0, STEP_FLOW.indexOf(step)); // position in flow (progress bar)
 
   // Competitor-track "Coming from X?" source for the reveal's transfer card.
   const transferFrom = !isComp
@@ -156,13 +166,14 @@ export default function QuizFlow() {
   // quiz is linked from getbarbr.com). Until then it falls back to browser history,
   // and is a no-op on a direct/first load.
   const back = () => {
-    if (step === 0) {
+    const pos = STEP_FLOW.indexOf(step);
+    if (pos <= 0) {
       const landing = process.env.NEXT_PUBLIC_LANDING_URL;
       if (landing) window.location.href = landing;
       else if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
       return;
     }
-    setStep((s) => Math.max(0, s - 1));
+    setStep(STEP_FLOW[pos - 1]); // previous step in the active flow (skips gift when hidden)
   };
 
   // ── Forward transitions (each fires step_completed for the step left) ──
@@ -226,7 +237,7 @@ export default function QuizFlow() {
       setStep(3);
       return;
     }
-    setStep(5);
+    setStep(SHOW_GIFT ? 5 : 6); // skip gift → straight to success when the gift step is off
   };
   const giftContinue = () => {
     completeStep(5);
@@ -244,8 +255,8 @@ export default function QuizFlow() {
   return (
     <QuizShell
       screenKey={step}
-      step={step}
-      totalSteps={TOTAL_STEPS}
+      step={stepIndex}
+      totalSteps={STEP_FLOW.length}
       showBack={showBack}
       showProgress={showProgress}
       onBack={back}
