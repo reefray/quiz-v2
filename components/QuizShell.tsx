@@ -41,7 +41,12 @@ export default function QuizShell({
   children,
 }: QuizShellProps) {
   return (
-    <div className="relative flex min-h-[100dvh] w-full justify-center overflow-hidden bg-brand-surface">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="relative flex min-h-[100dvh] w-full justify-center overflow-hidden bg-brand-surface"
+    >
       {/* Mobile-first content column, centered on wider viewports */}
       <div className="relative z-10 flex min-h-[100dvh] w-full max-w-[440px] flex-col">
         {/* ── Top bar: back (left) · theme toggle (right) ── */}
@@ -78,6 +83,6 @@ export default function QuizShell({
           </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

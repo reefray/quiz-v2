@@ -78,7 +78,7 @@ export default function RevealScreen({
         delay={0.86}
         className="mt-6 inline-flex items-center gap-1.5 text-[12.5px] text-muted"
       >
-        <Scissors size={14} className="text-brand-greenDark" /> Trusted by 700+ UK barbers
+        <Scissors size={14} className="text-brand-greenDark" /> Trusted by 3,000+ barbers
       </Item>
 
       <div className="flex-1" />

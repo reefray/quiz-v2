@@ -152,7 +152,18 @@ export default function QuizFlow() {
     setSecs(HOLD_SECONDS);
   };
 
-  const back = () => setStep((s) => Math.max(0, s - 1));
+  // Back from Q1 returns to the landing page (set NEXT_PUBLIC_LANDING_URL once the
+  // quiz is linked from getbarbr.com). Until then it falls back to browser history,
+  // and is a no-op on a direct/first load.
+  const back = () => {
+    if (step === 0) {
+      const landing = process.env.NEXT_PUBLIC_LANDING_URL;
+      if (landing) window.location.href = landing;
+      else if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+      return;
+    }
+    setStep((s) => Math.max(0, s - 1));
+  };
 
   // ── Forward transitions (each fires step_completed for the step left) ──
   const chooseMethod = (id: string) => {
@@ -226,8 +237,8 @@ export default function QuizFlow() {
     metaOnce("AppDownloadClicked", { store: storeFromUA() });
   };
 
-  // Back available on every screen except the first. Progress hidden on success.
-  const showBack = step > 0;
+  // Back shown on every screen (Q1 → landing). Progress hidden on success.
+  const showBack = true;
   const showProgress = step < 6;
 
   return (
