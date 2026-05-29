@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * Mode-dependent tokens as CSS variables so the dark/light toggle only flips
+   * these. Fixed brand greens live in the Tailwind config.
+   * Light = RN brand (pale-green → white). Dark = prototype-style dark, but with
+   * brand green accents instead of the prototype's amber.
+   */
+  :root {
+    --bg-surface: linear-gradient(180deg, #f0fdf4 0%, #fafffe 40%, #ffffff 100%);
+    --c-ink: #111827;
+    --c-muted: #6b7280;
+    --c-faint: #9ca3af;
+    --c-line: #e5e7eb;
+    --c-card: rgba(255, 255, 255, 0.8); /* translucent option/card surface */
+    --c-surface: #ffffff; /* solid input/card surface */
+
+    /* Accent green as RGB channels so themes can shift it (opacity modifiers work). */
+    --brand-green: 34 197 94; /* #22c55e */
+    --brand-green-dark: 22 163 74; /* #16a34a */
+    --progress-fill: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+
+    --cta-fill: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
+    --cta-text: #ffffff;
+    --cta-shadow: 0 12px 20px -4px rgba(17, 24, 39, 0.15);
+
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.7);
+  }
+
+  .dark {
+    --bg-surface:
+      radial-gradient(900px 520px at 50% -10%, #102a1c 0%, transparent 60%),
+      radial-gradient(700px 600px at 90% 110%, #0c2016 0%, transparent 55%),
+      linear-gradient(#070908, #070908);
+    --c-ink: #f2f5f1;
+    --c-muted: #8c948b;
+    --c-faint: #6a726a;
+    --c-line: #232b25;
+    --c-card: rgba(26, 32, 27, 0.6);
+    --c-surface: #161b17;
+
+    --cta-fill: linear-gradient(90deg, #0b0d0b 0%, #1f231f 100%);
+    --cta-text: #ffffff;
+    --cta-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+
+    --glass-bg: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.12);
+  }
+
+  /*
+   * "Neon" variant — matches landing-page-v2: pure black + faint green glow,
+   * mint→cyan gradient CTA with black text, white-glass cards, neon-green accent.
+   * Applied together with .dark so dark: utilities still fire; defined after
+   * .dark so these vars win.
+   */
+  .neon {
+    --bg-surface:
+      radial-gradient(820px 480px at 50% -12%, rgba(25, 251, 166, 0.07) 0%, transparent 60%),
+      linear-gradient(#000000, #000000);
+    --c-ink: #ffffff;
+    --c-muted: #a3a3a3;
+    --c-faint: #6f6f6f;
+    --c-line: rgba(255, 255, 255, 0.1);
+    --c-card: rgba(255, 255, 255, 0.06); /* white-glass card */
+    --c-surface: #171717; /* solid grayish input/card */
+
+    --brand-green: 0 255 157; /* #00FF9D — fills / dots / rings */
+    --brand-green-dark: 25 251 166; /* #19fba6 — accent text on black */
+    --progress-fill: linear-gradient(91deg, #00ff9d 0%, #00ffc8 100%);
+
+    --cta-fill: linear-gradient(91deg, #00ff9d 0%, #00ffc8 100%);
+    --cta-text: #04130c;
+    --cta-shadow: 0 12px 30px -10px rgba(0, 255, 157, 0.35);
+
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.14);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    @apply font-sans text-ink antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
