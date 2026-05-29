@@ -59,8 +59,8 @@
    */
   .neon {
     --bg-surface:
-      radial-gradient(820px 480px at 50% -12%, rgba(25, 251, 166, 0.07) 0%, transparent 60%),
-      linear-gradient(165deg, #0a0a0b 0%, #151517 55%, #1d1d21 100%);
+      radial-gradient(820px 480px at 50% -12%, rgba(25, 251, 166, 0.06) 0%, transparent 60%),
+      linear-gradient(165deg, #050506 0%, #0e0e10 55%, #161618 100%);
     --c-ink: #ffffff;
     --c-muted: #a3a3a3;
     --c-faint: #6f6f6f;
@@ -94,6 +94,6 @@
     background-color: #070908;
   }
   .neon body {
-    background-color: #0a0a0b;
+    background-color: #050506;
   }
 }
