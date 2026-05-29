@@ -94,10 +94,13 @@ export default function SuccessScreen({
 
       {/* what's waiting */}
       <div className="mt-6 w-full rounded-card border border-line bg-surface p-4 text-left">
-        <div className="text-eyebrow font-black uppercase text-muted">Waiting in the app</div>
+        <div className="text-eyebrow font-semibold uppercase text-muted">Waiting in the app</div>
         <div className="mt-3 flex flex-col gap-3">
           <WaitingRow title="Your live booking page" note="— go live in under 5 min" />
-          <WaitingRow title="Your free Instagram ads" note="— 5 ready to post" />
+          <WaitingRow
+            title="Free Instagram ads"
+            note="— 5 ready to post graphics promoting your new booking link"
+          />
         </div>
       </div>
 
