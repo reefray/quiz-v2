@@ -56,6 +56,7 @@ const config: Config = {
       backgroundImage: {
         "brand-surface": "var(--bg-surface)",
         "progress-fill": "var(--progress-fill)",
+        "green-gradient": "var(--progress-fill)", // brand green gradient (themeable) for text/accents
         "cta-fill": "var(--cta-fill)",
       },
       transitionTimingFunction: {

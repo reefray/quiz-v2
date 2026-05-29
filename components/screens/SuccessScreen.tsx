@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Lock, LockOpen, Clock, Check, Smartphone, RotateCcw } from "lucide-react";
+import { Lock, LockOpen, Clock, Check, Globe, Smartphone, RotateCcw } from "lucide-react";
 import CtaButton from "../CtaButton";
 import Confetti from "../Confetti";
 
@@ -75,21 +75,35 @@ export default function SuccessScreen({
         </AnimatePresence>
       </motion.div>
 
-      {/* held-for pill (sits where the eyebrow was) */}
-      <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-brand-green/25 bg-brand-green/10 px-3.5 py-1.5 text-[12.5px] font-medium text-brand-greenDark">
-        <Clock size={13} /> Held for <span className="font-bold tabular-nums">{hhmmss(secs)}</span>
+      {/* link card — globe + booking link (username in the green gradient),
+          wrapped in a sweeping glowing border beam */}
+      <div
+        className="relative mt-5 w-full overflow-hidden rounded-2xl p-[1.5px] shadow-[0_0_28px_-8px_rgb(var(--brand-green)_/_0.5)]"
+      >
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[170%] -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "conic-gradient(from 0deg, transparent 0deg, transparent 255deg, rgb(var(--brand-green)) 315deg, rgb(var(--brand-green)) 340deg, transparent 360deg)",
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        />
+        <div className="relative z-10 flex items-center justify-center gap-2 rounded-[15px] bg-surface px-4 py-3.5">
+          <Globe size={18} className="flex-none text-muted" />
+          <span className="text-[18px] font-semibold text-muted">barbr.me/</span>
+          <span className="bg-green-gradient bg-clip-text text-[18px] font-extrabold text-transparent">
+            {cleanHandle}
+          </span>
+        </div>
       </div>
 
-      <h1 className="mt-3 text-heading font-bold text-ink">Locked in.</h1>
+      <h1 className="mt-5 text-heading font-bold text-ink">You&apos;re in</h1>
 
-      {/* link hero — no box, with a live dot on the left */}
-      <div className="mt-2 flex items-center justify-center text-[19px]">
-        <span className="relative mr-2 flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-green" />
-        </span>
-        <span className="font-semibold text-muted">barbr.me/</span>
-        <span className="font-bold text-ink">{cleanHandle}</span>
+      {/* held-for countdown */}
+      <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand-green/25 bg-brand-green/10 px-3.5 py-1.5 text-[12.5px] font-medium text-brand-greenDark">
+        <Clock size={13} /> Held for <span className="font-bold tabular-nums">{hhmmss(secs)}</span>
       </div>
 
       {/* what's waiting */}
@@ -106,6 +120,10 @@ export default function SuccessScreen({
 
       <div className="flex-1" />
 
+      <p className="mb-3 text-[12.5px] leading-snug text-muted">
+        <span className="font-semibold text-ink">Download the app to go live.</span> Most
+        barbers finish setup in under 5 minutes.
+      </p>
       <CtaButton onClick={onDownload}>
         <Smartphone size={18} /> Download the app
       </CtaButton>
