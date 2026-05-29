@@ -75,6 +75,8 @@ export default function SuccessScreen({
         </AnimatePresence>
       </motion.div>
 
+      <h1 className="mt-4 text-heading font-bold text-ink">You&apos;re in</h1>
+
       {/* link card — globe + booking link (username in the green gradient),
           wrapped in a sweeping glowing border beam */}
       <div
@@ -98,8 +100,6 @@ export default function SuccessScreen({
           </span>
         </div>
       </div>
-
-      <h1 className="mt-5 text-heading font-bold text-ink">You&apos;re in</h1>
 
       {/* held-for countdown */}
       <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand-green/25 bg-brand-green/10 px-3.5 py-1.5 text-[12.5px] font-medium text-brand-greenDark">
