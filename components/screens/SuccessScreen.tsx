@@ -82,14 +82,14 @@ export default function SuccessScreen({
 
       <h1 className="mt-3 text-heading font-bold text-ink">Locked in.</h1>
 
-      {/* link hero — no box, with a live dot */}
+      {/* link hero — no box, with a live dot on the left */}
       <div className="mt-2 flex items-center justify-center text-[19px]">
-        <span className="font-semibold text-muted">barbr.me/</span>
-        <span className="font-bold text-ink">{cleanHandle}</span>
-        <span className="relative ml-2 flex h-2 w-2">
+        <span className="relative mr-2 flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-green" />
         </span>
+        <span className="font-semibold text-muted">barbr.me/</span>
+        <span className="font-bold text-ink">{cleanHandle}</span>
       </div>
 
       {/* what's waiting */}
@@ -97,7 +97,7 @@ export default function SuccessScreen({
         <div className="text-eyebrow font-black uppercase text-muted">Waiting in the app</div>
         <div className="mt-3 flex flex-col gap-3">
           <WaitingRow title="Your live booking page" note="— go live in under 5 min" />
-          <WaitingRow title="Your free promo pack" note="— 3 graphics, ready to post" />
+          <WaitingRow title="Your free Instagram ads" note="— 5 ready to post" />
         </div>
       </div>
 

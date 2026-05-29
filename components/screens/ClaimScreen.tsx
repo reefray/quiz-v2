@@ -28,7 +28,7 @@ export default function ClaimScreen({
   return (
     <>
       <Eyebrow>Claim your link</Eyebrow>
-      <h1 className="text-heading font-bold text-ink">Grab your booking link</h1>
+      <h1 className="text-heading font-bold text-ink">Secure your booking link</h1>
       <p className="mt-2 text-subtitle text-muted">
         The one link clients tap to book you — yours, not a marketplace profile. Pick
         yours while it&apos;s still free.

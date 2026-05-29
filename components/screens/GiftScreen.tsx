@@ -58,11 +58,9 @@ export default function GiftScreen({
       <Confetti />
 
       <Eyebrow>Free gift</Eyebrow>
-      <h1 className="text-heading font-bold text-ink">Your free promo pack</h1>
+      <h1 className="text-heading font-bold text-ink">Free Instagram ads</h1>
       <p className="mt-2 text-subtitle text-muted">
-        3 ready-to-post graphics built around{" "}
-        <span className="text-brand-greenDark">barbr.me/{cleanHandle}</span> — post them
-        straight to your story.
+        Five custom Instagram ads you can post now to drive people to your link.
       </p>
 
       {/* Fanned promo deck — cards slide in from the side and stack */}
