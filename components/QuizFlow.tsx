@@ -10,7 +10,7 @@ import ReserveScreen from "./screens/ReserveScreen";
 import GiftScreen from "./screens/GiftScreen";
 import SuccessScreen from "./screens/SuccessScreen";
 import { TAKEN, COMP_METHODS } from "@/lib/quizContent";
-import { track, identify, setPerson, metaLead, storeFromUA } from "@/lib/analytics";
+import { track, identify, setPerson, metaLead, metaTrackCustom, storeFromUA } from "@/lib/analytics";
 import { insertLead } from "@/lib/leads";
 
 const TOTAL_STEPS = 7; // 0..6
@@ -50,6 +50,13 @@ export default function QuizFlow() {
   const stepEnteredAt = useRef(Date.now());
   const startedRef = useRef(false);
   const completedRef = useRef(false);
+  // Meta funnel-step events fire at most once per session (back/forward safe).
+  const metaFired = useRef<Set<string>>(new Set());
+  const metaOnce = (event: string, params: Record<string, unknown> = {}) => {
+    if (metaFired.current.has(event)) return;
+    metaFired.current.add(event);
+    metaTrackCustom(event, params);
+  };
 
   const isComp = method ? COMP_METHODS.includes(method) : false;
   const cleanHandle = cleanise(handle) || "yourname";
@@ -68,6 +75,7 @@ export default function QuizFlow() {
     if (startedRef.current) return;
     startedRef.current = true;
     track("quiz_started", { session_id: sessionId });
+    metaOnce("QuizStarted");
   }, [sessionId]);
 
   // Reset the per-step timer whenever the step changes.
@@ -80,6 +88,7 @@ export default function QuizFlow() {
     if (step === 6 && !completedRef.current) {
       completedRef.current = true;
       track("quiz_completed", { session_id: sessionId, handle: cleanHandle });
+      metaOnce("QuizCompleted");
     }
   }, [step, sessionId, cleanHandle]);
 
@@ -132,6 +141,7 @@ export default function QuizFlow() {
 
   const reset = () => {
     completedRef.current = false;
+    metaFired.current.clear();
     setStep(0);
     setMethod(null);
     setOtherSystem("");
@@ -147,18 +157,21 @@ export default function QuizFlow() {
   // ── Forward transitions (each fires step_completed for the step left) ──
   const chooseMethod = (id: string) => {
     completeStep(0, { booking_method: id });
+    metaOnce("QuizQ1Answered", { booking_method: id });
     setMethod(id);
     setHeadache(null); // re-branch headache list on a changed method
     setStep(1);
   };
   const chooseOther = () => {
     completeStep(0, { booking_method: "other", other_system: otherSystem.trim() || undefined });
+    metaOnce("QuizQ1Answered", { booking_method: "other" });
     setMethod("other");
     setHeadache(null);
     setStep(1);
   };
   const chooseHeadache = (h: string) => {
     completeStep(1, { headache: h });
+    metaOnce("QuizQ2Answered", { headache: h });
     setHeadache(h);
     setStep(2);
   };
@@ -169,6 +182,7 @@ export default function QuizFlow() {
   const claimHandle = () => {
     completeStep(3);
     track("handle_claimed", { session_id: sessionId, handle: cleanHandle });
+    metaOnce("HandleClaimed");
     setStep(4);
   };
   const reserveEmail = async () => {
@@ -182,7 +196,10 @@ export default function QuizFlow() {
     });
     identify(sessionId);
     setPerson({ email });
-    metaLead(email);
+    if (!metaFired.current.has("Lead")) {
+      metaFired.current.add("Lead");
+      metaLead(email); // standard Lead + enables advanced matching for later events
+    }
 
     const res = await insertLead({
       session_id: sessionId,
@@ -206,6 +223,7 @@ export default function QuizFlow() {
   };
   const downloadApp = () => {
     track("store_cta_clicked", { session_id: sessionId, store: storeFromUA() });
+    metaOnce("AppDownloadClicked", { store: storeFromUA() });
   };
 
   // Back available on every screen except the first. Progress hidden on success.

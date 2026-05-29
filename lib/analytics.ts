@@ -33,6 +33,8 @@ const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 /**
  * Fire the Meta `Lead` event with advanced matching. Pass the PLAIN email —
  * Meta SHA-256 hashes it client-side; do NOT pre-hash for the browser pixel.
+ * Setting `em` on init also enables advanced matching for events fired *after*
+ * this one in the session (e.g. QuizCompleted, AppDownloadClicked).
  */
 export function metaLead(email: string) {
   if (typeof window === "undefined") return;
@@ -40,6 +42,14 @@ export function metaLead(email: string) {
   if (!fbq || !META_PIXEL_ID) return;
   fbq("init", META_PIXEL_ID, { em: email });
   fbq("track", "Lead");
+}
+
+/** Fire a custom Meta event (funnel-step rung). Use `fbq('trackCustom', …)`. */
+export function metaTrackCustom(event: string, params: Record<string, unknown> = {}) {
+  if (typeof window === "undefined") return;
+  const fbq = (window as unknown as { fbq?: Fbq }).fbq;
+  if (!fbq || !META_PIXEL_ID) return;
+  fbq("trackCustom", event, params);
 }
 
 export type StoreTarget = "ios" | "android" | "other";
