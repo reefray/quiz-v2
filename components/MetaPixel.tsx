@@ -4,9 +4,9 @@ import Script from "next/script";
 import { useEffect } from "react";
 
 /**
- * Base Meta Pixel (init + PageView) and fbclid capture. The `Lead` event is
- * fired on email submit from the flow (see lib/analytics.metaLead). No-op
- * without a pixel ID.
+ * Base Meta Pixel (init + PageView) and fbclid capture. The `InitiateCheckout`
+ * event is fired on email submit from the flow (see
+ * lib/analytics.metaInitiateCheckout). No-op without a pixel ID.
  */
 export default function MetaPixel() {
   const id = process.env.NEXT_PUBLIC_META_PIXEL_ID;

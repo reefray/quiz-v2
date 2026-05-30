@@ -10,7 +10,7 @@ import ReserveScreen from "./screens/ReserveScreen";
 import GiftScreen from "./screens/GiftScreen";
 import SuccessScreen from "./screens/SuccessScreen";
 import { TAKEN, COMP_METHODS } from "@/lib/quizContent";
-import { track, identify, setPerson, metaLead, metaTrackCustom, storeFromUA } from "@/lib/analytics";
+import { track, identify, setPerson, metaInitiateCheckout, metaTrackCustom, storeFromUA } from "@/lib/analytics";
 import { fireLead, postLead, checkHandle } from "@/lib/leads";
 
 const HOLD_SECONDS = 24 * 3600 - 12;
@@ -245,9 +245,9 @@ export default function QuizFlow() {
     });
     identify(sessionId);
     setPerson({ email });
-    if (!metaFired.current.has("Lead")) {
-      metaFired.current.add("Lead");
-      metaLead(email); // standard Lead + enables advanced matching for later events
+    if (!metaFired.current.has("InitiateCheckout")) {
+      metaFired.current.add("InitiateCheckout");
+      metaInitiateCheckout(email); // InitiateCheckout + enables advanced matching for later events
     }
     // Handle uniqueness is already gated at the claim step; just record the email.
     fireLead(sessionId, { email });

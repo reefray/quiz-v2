@@ -19,13 +19,13 @@ export const metadata: Metadata = {
 };
 
 // maximumScale:1 stops iOS from auto-zooming when a field is focused (iOS still
-// allows manual accessibility pinch). interactiveWidget resizes the layout when
-// the on-screen keyboard opens so the CTA lifts above it (Chrome/Android).
+// allows manual accessibility pinch). We intentionally leave interactiveWidget
+// at its default (resizes-visual) so the on-screen keyboard overlays the page
+// without reflowing it — the CTA stays put rather than jumping around.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  interactiveWidget: "resizes-content",
 };
 
 // Fixed theme, set via env (no in-app toggle). NEXT_PUBLIC_THEME: 'light' | 'dark'

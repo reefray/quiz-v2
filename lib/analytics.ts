@@ -31,17 +31,19 @@ type Fbq = (...args: unknown[]) => void;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 /**
- * Fire the Meta `Lead` event with advanced matching. Pass the PLAIN email —
- * Meta SHA-256 hashes it client-side; do NOT pre-hash for the browser pixel.
- * Setting `em` on init also enables advanced matching for events fired *after*
- * this one in the session (e.g. QuizCompleted, AppDownloadClicked).
+ * Fire the Meta `InitiateCheckout` event with advanced matching. We use
+ * InitiateCheckout (not Lead) so the conversion can optimise sales/purchase
+ * campaigns — `Lead` is restricted to lead-gen objectives. Pass the PLAIN
+ * email — Meta SHA-256 hashes it client-side; do NOT pre-hash for the browser
+ * pixel. Setting `em` on init also enables advanced matching for events fired
+ * *after* this one in the session (e.g. QuizCompleted, AppDownloadClicked).
  */
-export function metaLead(email: string) {
+export function metaInitiateCheckout(email: string) {
   if (typeof window === "undefined") return;
   const fbq = (window as unknown as { fbq?: Fbq }).fbq;
   if (!fbq || !META_PIXEL_ID) return;
   fbq("init", META_PIXEL_ID, { em: email });
-  fbq("track", "Lead");
+  fbq("track", "InitiateCheckout");
 }
 
 /** Fire a custom Meta event (funnel-step rung). Use `fbq('trackCustom', …)`. */
