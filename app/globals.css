@@ -83,6 +83,9 @@
   html,
   body {
     height: 100%;
+    /* No rubber-band overscroll — stops the flat body colour flashing past the
+     * themed gradient when you drag at the top/bottom on mobile. */
+    overscroll-behavior: none;
   }
 
   body {

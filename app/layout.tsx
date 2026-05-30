@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -16,6 +16,16 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Barbr",
   description: "Get your booking page in under 5 minutes.",
+};
+
+// maximumScale:1 stops iOS from auto-zooming when a field is focused (iOS still
+// allows manual accessibility pinch). interactiveWidget resizes the layout when
+// the on-screen keyboard opens so the CTA lifts above it (Chrome/Android).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 // Fixed theme, set via env (no in-app toggle). NEXT_PUBLIC_THEME: 'light' | 'dark'

@@ -35,7 +35,7 @@ export default function ReserveScreen({
           value={email}
           placeholder="you@email.com"
           onChange={(e) => setEmail(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent py-3.5 text-[15.5px] text-ink outline-none placeholder:text-faint"
+          className="min-w-0 flex-1 bg-transparent py-3.5 text-[16px] text-ink outline-none placeholder:text-faint"
         />
       </div>
 
