@@ -96,6 +96,13 @@ export default function QuizFlow() {
     }
     track("quiz_started", { session_id: sessionId });
     metaOnce("QuizStarted");
+    // Creates the lead row and opens the Slack thread for this session (later
+    // milestones reply under it). fbclid/user_agent give the parent ping context.
+    fireLead(
+      sessionId,
+      { fbclid: fbclidRef.current, user_agent: ua() },
+      "quiz_started",
+    );
   }, [sessionId]);
 
   // Reset the per-step timer whenever the step changes.
@@ -189,8 +196,11 @@ export default function QuizFlow() {
   const chooseMethod = (id: string) => {
     completeStep(0, { booking_method: id });
     metaOnce("QuizQ1Answered", { booking_method: id });
-    // Q1 creates the lead row.
-    fireLead(sessionId, { booking_method: id, fbclid: fbclidRef.current, user_agent: ua() });
+    fireLead(
+      sessionId,
+      { booking_method: id, fbclid: fbclidRef.current, user_agent: ua() },
+      "q1_answered",
+    );
     setMethod(id);
     setHeadache(null); // re-branch headache list on a changed method
     setStep(1);
@@ -199,13 +209,16 @@ export default function QuizFlow() {
     const other_system = otherSystem.trim() || undefined;
     completeStep(0, { booking_method: "other", other_system });
     metaOnce("QuizQ1Answered", { booking_method: "other" });
-    // Q1 creates the lead row.
-    fireLead(sessionId, {
-      booking_method: "other",
-      other_system: other_system ?? null,
-      fbclid: fbclidRef.current,
-      user_agent: ua(),
-    });
+    fireLead(
+      sessionId,
+      {
+        booking_method: "other",
+        other_system: other_system ?? null,
+        fbclid: fbclidRef.current,
+        user_agent: ua(),
+      },
+      "q1_answered",
+    );
     setMethod("other");
     setHeadache(null);
     setStep(1);
@@ -250,7 +263,7 @@ export default function QuizFlow() {
       metaInitiateCheckout(email); // InitiateCheckout + enables advanced matching for later events
     }
     // Handle uniqueness is already gated at the claim step; just record the email.
-    fireLead(sessionId, { email });
+    fireLead(sessionId, { email }, "email_given");
     setStep(SHOW_GIFT ? 5 : 6); // skip gift → straight to success when the gift step is off
   };
   const giftContinue = () => {
@@ -262,7 +275,7 @@ export default function QuizFlow() {
     track("store_cta_clicked", { session_id: sessionId, store });
     metaOnce("AppDownloadClicked", { store });
     // keepalive (in postLead) lets this write survive the navigation below.
-    fireLead(sessionId, { clicked_download: true, download_store: store });
+    fireLead(sessionId, { clicked_download: true, download_store: store }, "download_clicked");
 
     const af = (window as any).AF_SMART_SCRIPT;
     const result = af?.generateOneLinkURL({

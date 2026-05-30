@@ -4,6 +4,17 @@
  * session_id, upserted as the user advances through the funnel.
  */
 
+/**
+ * Funnel milestones that trigger a Slack ping (one threaded message per
+ * session). Kept in sync with LeadEvent in lib/slack.ts — duplicated rather
+ * than imported because that module is server-only.
+ */
+export type LeadEvent =
+  | "quiz_started"
+  | "q1_answered"
+  | "email_given"
+  | "download_clicked";
+
 /** Columns the funnel may write. session_id is passed separately. */
 export interface LeadFields {
   booking_method?: string | null;
@@ -33,12 +44,13 @@ export interface LeadResult {
 export async function postLead(
   session_id: string,
   fields: LeadFields,
+  event?: LeadEvent,
 ): Promise<LeadResult> {
   try {
     const res = await fetch("/api/lead", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ session_id, ...fields }),
+      body: JSON.stringify({ session_id, ...fields, ...(event ? { event } : {}) }),
       keepalive: true,
     });
     const json = (await res.json().catch(() => ({}))) as LeadResult;
@@ -50,8 +62,12 @@ export async function postLead(
 }
 
 /** Fire-and-forget write: never blocks the UI, swallows all errors. */
-export function fireLead(session_id: string, fields: LeadFields): void {
-  void postLead(session_id, fields);
+export function fireLead(
+  session_id: string,
+  fields: LeadFields,
+  event?: LeadEvent,
+): void {
+  void postLead(session_id, fields, event);
 }
 
 /** Live handle-availability check for the claim step. Fails open (true). */

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { slackConfigured, isLeadEvent, postLeadNotification } from "@/lib/slack";
 
 // service_role must stay server-side; never statically optimise.
 export const runtime = "nodejs";
@@ -41,9 +42,13 @@ export async function POST(req: Request) {
     if (ALLOWED.has(key) && value !== undefined) row[key] = value;
   }
 
-  const { error } = await supabaseAdmin
+  // Select the merged row back so the Slack message has the full session
+  // context (handle/headache/etc.) and we can read/store the thread ts.
+  const { data, error } = await supabaseAdmin
     .from("leads")
-    .upsert(row, { onConflict: "session_id" });
+    .upsert(row, { onConflict: "session_id" })
+    .select()
+    .single();
 
   if (error) {
     // 23505 here can only be the lower(handle) unique index — session_id
@@ -53,6 +58,24 @@ export async function POST(req: Request) {
     }
     console.error("[/api/lead] upsert failed:", error.code, error.message);
     return NextResponse.json({ error: "db_error" }, { status: 500 });
+  }
+
+  // Slack ping on the four funnel milestones. Threaded per session: the first
+  // milestone posts the parent and we persist its ts; later ones reply under it.
+  // Never let a Slack failure surface to the funnel.
+  const { event } = body;
+  if (slackConfigured && isLeadEvent(event) && data) {
+    try {
+      const { ts } = await postLeadNotification(event, data);
+      if (ts && !data.slack_thread_ts) {
+        await supabaseAdmin
+          .from("leads")
+          .update({ slack_thread_ts: ts })
+          .eq("session_id", session_id);
+      }
+    } catch (e) {
+      console.error("[/api/lead] slack notify failed:", e);
+    }
   }
 
   return NextResponse.json({ ok: true });
