@@ -4,7 +4,6 @@ import { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import ProgressTrack from "./ProgressTrack";
-import ThemeToggle from "./ThemeToggle";
 
 interface QuizShellProps {
   /** Stable key for the current screen — changing it remounts + replays the enter animation. */
@@ -49,8 +48,8 @@ export default function QuizShell({
     >
       {/* Mobile-first content column, centered on wider viewports */}
       <div className="relative z-10 flex min-h-[100dvh] w-full max-w-[440px] flex-col">
-        {/* ── Top bar: back (left) · theme toggle (right) ── */}
-        <header className="flex items-center justify-between px-[22px] pb-1 pt-10 sm:pt-12">
+        {/* ── Top bar: back (left) ── */}
+        <header className="flex items-center px-[22px] pb-1 pt-10 sm:pt-12">
           {showBack && onBack ? (
             <button
               type="button"
@@ -63,8 +62,6 @@ export default function QuizShell({
           ) : (
             <span className="h-10 w-10" />
           )}
-
-          <ThemeToggle />
         </header>
 
         {/* ── Progress track ── */}

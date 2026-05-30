@@ -2,24 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Lock, LockOpen, Clock, Check, Globe, Smartphone, RotateCcw } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Lock, LockOpen, Clock, Check, Globe, Smartphone } from "lucide-react";
 import CtaButton from "../CtaButton";
 import Confetti from "../Confetti";
 
-function WaitingRow({
-  title,
-  note,
-  icon: Icon = Check,
-}: {
-  title: string;
-  note: React.ReactNode;
-  icon?: LucideIcon;
-}) {
+function WaitingRow({ title, note }: { title: string; note: string }) {
   return (
     <div className="flex items-start gap-3">
       <span className="mt-0.5 grid h-[22px] w-[22px] flex-none place-items-center rounded-full bg-brand-green/15 text-brand-greenDark">
-        <Icon size={13} />
+        <Check size={13} />
       </span>
       <span className="text-[14px] text-ink">
         <span className="font-bold">{title}</span>
@@ -29,20 +20,18 @@ function WaitingRow({
   );
 }
 
-/** Step 6 — success. Left-aligned header + the reserved link inside the waiting card. */
+/** Step 6 — success. Centered header; reserved link card lives in the waiting card. */
 export default function SuccessScreen({
   cleanHandle,
   email,
   secs,
   hhmmss,
-  onReplay,
   onDownload,
 }: {
   cleanHandle: string;
   email: string;
   secs: number;
   hhmmss: (t: number) => string;
-  onReplay: () => void;
   onDownload: () => void;
 }) {
   // Lock starts open and snaps shut shortly after mount.
@@ -53,7 +42,7 @@ export default function SuccessScreen({
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col items-start text-left">
+    <div className="flex flex-1 flex-col items-center text-center">
       <Confetti />
 
       {/* lock ring — pops in, then locks shut */}
@@ -61,7 +50,7 @@ export default function SuccessScreen({
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.1 }}
-        className="mt-2 grid h-[64px] w-[64px] place-items-center rounded-full border-[1.5px] border-brand-green/40 text-brand-greenDark"
+        className="mt-3 grid h-[64px] w-[64px] place-items-center rounded-full border-[1.5px] border-brand-green/40 text-brand-greenDark"
         style={{
           background: "radial-gradient(circle at 50% 40%, rgba(34,197,94,.22), transparent 70%)",
         }}
@@ -85,37 +74,35 @@ export default function SuccessScreen({
       </motion.div>
 
       <h1 className="mt-4 text-heading font-bold text-ink">You&apos;re In 🎉</h1>
-
-      <p className="mt-2 text-subtitle text-muted">
-        <span className="font-semibold text-ink">Download the app to go live.</span> Most
-        barbers finish setup in under 5 minutes.
-      </p>
-
-      {/* held-for countdown (small) */}
-      <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand-green/25 bg-brand-green/10 px-3 py-1 text-[11.5px] font-medium text-brand-greenDark">
-        <Clock size={12} /> Held for <span className="font-bold tabular-nums">{hhmmss(secs)}</span>
-      </div>
+      <p className="mt-2 text-subtitle text-muted">Download the app to go live.</p>
 
       {/* what's waiting */}
       <div className="mt-6 w-full rounded-card border border-line bg-surface p-4 text-left">
         <div className="text-eyebrow font-semibold uppercase text-muted">Waiting in the app</div>
+
+        {/* reserved link card (globe + link + live countdown pill) */}
+        <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-line bg-card px-3 py-2.5">
+          <Globe size={17} className="flex-none text-brand-greenDark" />
+          <span className="min-w-0 flex-1 truncate text-[14px]">
+            <span className="font-semibold text-muted">barbr.me/</span>
+            <span className="bg-green-gradient bg-clip-text font-extrabold text-transparent">
+              {cleanHandle}
+            </span>
+          </span>
+          <span className="inline-flex flex-none items-center gap-1 rounded-full border border-brand-green/25 bg-brand-green/10 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-brand-greenDark">
+            <Clock size={11} /> {hhmmss(secs)}
+          </span>
+        </div>
+
         <div className="mt-3 flex flex-col gap-3">
-          <WaitingRow
-            icon={Globe}
-            title="Your reserved booking link"
-            note={
-              <>
-                — barbr.me/
-                <span className="bg-green-gradient bg-clip-text font-bold text-transparent">
-                  {cleanHandle}
-                </span>
-              </>
-            }
-          />
-          <WaitingRow title="Personalized website" note="— go live in under 5 min" />
+          <WaitingRow title="Your booking link" note="— go live in under 5 min" />
           <WaitingRow
             title="Free Instagram ads"
             note="— 5 ready to post graphics promoting your new booking link"
+          />
+          <WaitingRow
+            title="One-to-one support"
+            note="— live chat with us any time for help and support"
           />
         </div>
       </div>
@@ -128,13 +115,6 @@ export default function SuccessScreen({
       <p className="mt-3 text-[11.5px] font-normal text-muted">
         Link sent to {email || "your email"} · open it on your phone to log straight in
       </p>
-      <button
-        type="button"
-        onClick={onReplay}
-        className="mt-4 inline-flex items-center gap-1.5 self-center text-[12px] text-muted"
-      >
-        <RotateCcw size={13} /> Replay flow
-      </button>
     </div>
   );
 }

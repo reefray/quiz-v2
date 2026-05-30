@@ -1,54 +1,66 @@
-import { supabase } from "./supabase";
+/**
+ * Client-side lead capture. Talks ONLY to our own Next.js API routes — the
+ * browser never touches Supabase directly. Writes are progressive: one row per
+ * session_id, upserted as the user advances through the funnel.
+ */
 
-export interface LeadInput {
-  session_id: string;
-  booking_method: string | null;
-  headache: string | null;
-  handle: string;
-  email: string;
-  other_system?: string;
+/** Columns the funnel may write. session_id is passed separately. */
+export interface LeadFields {
+  booking_method?: string | null;
+  other_system?: string | null;
+  headache?: string | null;
+  handle?: string | null;
+  email?: string | null;
+  fbclid?: string | null;
+  reached_success?: boolean;
+  clicked_download?: boolean;
+  download_store?: string | null;
+  user_agent?: string | null;
 }
 
 export interface LeadResult {
-  ok: boolean;
-  /** true when the handle was taken between the live check and submit (23505). */
-  duplicate?: boolean;
+  ok?: boolean;
+  /** Set when the handle was taken by another session (Postgres 23505). */
+  error?: "handle_taken" | string;
 }
 
 /**
- * Insert one completed lead (called on email submit). No-op when Supabase isn't
- * configured. Returns { duplicate: true } on a unique-handle collision so the
- * flow can send the user back to re-pick.
+ * Upsert lead fields for a session. Awaitable (the claim step needs the
+ * handle_taken result), but callers that don't care should NOT await — see
+ * fireLead() for the fire-and-forget wrapper. `keepalive` lets the final
+ * download write survive the navigation away.
  */
-export async function insertLead(input: LeadInput): Promise<LeadResult> {
-  if (!supabase) return { ok: true };
-
-  let fbclid: string | null = null;
+export async function postLead(
+  session_id: string,
+  fields: LeadFields,
+): Promise<LeadResult> {
   try {
-    fbclid = localStorage.getItem("fbclid");
+    const res = await fetch("/api/lead", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ session_id, ...fields }),
+      keepalive: true,
+    });
+    const json = (await res.json().catch(() => ({}))) as LeadResult;
+    if (!res.ok) return { error: json.error ?? "request_failed" };
+    return json;
   } catch {
-    /* ignore */
+    return { error: "network" };
   }
+}
 
-  const { error } = await supabase.from("leads").insert({
-    session_id: input.session_id,
-    booking_method: input.booking_method,
-    headache: input.headache,
-    handle: input.handle,
-    email: input.email,
-    fbclid,
-    answers: {
-      booking_method: input.booking_method,
-      headache: input.headache,
-      other_system: input.other_system ?? null,
-    },
-    user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-  });
+/** Fire-and-forget write: never blocks the UI, swallows all errors. */
+export function fireLead(session_id: string, fields: LeadFields): void {
+  void postLead(session_id, fields);
+}
 
-  if (error) {
-    if (error.code === "23505") return { ok: false, duplicate: true };
-    console.warn("[leads] insert failed:", error.message);
-    return { ok: false };
+/** Live handle-availability check for the claim step. Fails open (true). */
+export async function checkHandle(handle: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/handle?handle=${encodeURIComponent(handle)}`);
+    const json = (await res.json()) as { available?: boolean };
+    return Boolean(json.available);
+  } catch {
+    return true;
   }
-  return { ok: true };
 }

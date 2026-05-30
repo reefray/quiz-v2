@@ -11,7 +11,7 @@ import GiftScreen from "./screens/GiftScreen";
 import SuccessScreen from "./screens/SuccessScreen";
 import { TAKEN, COMP_METHODS } from "@/lib/quizContent";
 import { track, identify, setPerson, metaLead, metaTrackCustom, storeFromUA } from "@/lib/analytics";
-import { insertLead } from "@/lib/leads";
+import { fireLead, postLead, checkHandle } from "@/lib/leads";
 
 const HOLD_SECONDS = 24 * 3600 - 12;
 const STEP_NAMES = [
@@ -56,6 +56,8 @@ export default function QuizFlow() {
 
   // ── Analytics session + timing ──
   const [sessionId] = useState(newSessionId);
+  // fbclid captured once from the URL (persisted for the AppsFlyer afSub1 too).
+  const fbclidRef = useRef<string | null>(null);
   const stepEnteredAt = useRef(Date.now());
   const startedRef = useRef(false);
   const completedRef = useRef(false);
@@ -80,10 +82,18 @@ export default function QuizFlow() {
         ? "Fresha"
         : otherSystem.trim() || "your current app";
 
-  // quiz_started — once, when the first screen mounts.
+  // quiz_started — once, when the first screen mounts. Also capture fbclid from
+  // the URL (fall back to a prior value); persist it for the AppsFlyer afSub1.
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get("fbclid");
+      if (fromUrl) localStorage.setItem("fbclid", fromUrl);
+      fbclidRef.current = fromUrl ?? localStorage.getItem("fbclid");
+    } catch {
+      /* ignore */
+    }
     track("quiz_started", { session_id: sessionId });
     metaOnce("QuizStarted");
   }, [sessionId]);
@@ -99,12 +109,16 @@ export default function QuizFlow() {
       completedRef.current = true;
       track("quiz_completed", { session_id: sessionId, handle: cleanHandle });
       metaOnce("QuizCompleted");
+      fireLead(sessionId, { reached_success: true });
     }
   }, [step, sessionId, cleanHandle]);
 
-  // Live handle-availability check (debounced), mirrors the prototype.
+  // Live handle-availability check (debounced), mirrors the prototype. Hits
+  // GET /api/handle; the local TAKEN list is an instant offline reject, and the
+  // `cancelled` guard drops results from superseded keystrokes.
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
+    let cancelled = false;
     const h = cleanise(handle);
     if (h.length === 0) {
       setStatus("idle");
@@ -115,11 +129,16 @@ export default function QuizFlow() {
       return;
     }
     setStatus("checking");
-    timer.current = setTimeout(
-      () => setStatus(TAKEN.includes(h) ? "taken" : "available"),
-      650,
-    );
+    timer.current = setTimeout(async () => {
+      if (TAKEN.includes(h)) {
+        if (!cancelled) setStatus("taken");
+        return;
+      }
+      const available = await checkHandle(h);
+      if (!cancelled) setStatus(available ? "available" : "taken");
+    }, 650);
     return () => {
+      cancelled = true;
       if (timer.current) clearTimeout(timer.current);
     };
   }, [handle]);
@@ -149,19 +168,6 @@ export default function QuizFlow() {
     });
   };
 
-  const reset = () => {
-    completedRef.current = false;
-    metaFired.current.clear();
-    setStep(0);
-    setMethod(null);
-    setOtherSystem("");
-    setHeadache(null);
-    setHandle("");
-    setStatus("idle");
-    setEmail("");
-    setSecs(HOLD_SECONDS);
-  };
-
   // Back from Q1 returns to the landing page (set NEXT_PUBLIC_LANDING_URL once the
   // quiz is linked from getbarbr.com). Until then it falls back to browser history,
   // and is a no-op on a direct/first load.
@@ -177,16 +183,29 @@ export default function QuizFlow() {
   };
 
   // ── Forward transitions (each fires step_completed for the step left) ──
+  // user_agent helper for the lead row.
+  const ua = () => (typeof navigator !== "undefined" ? navigator.userAgent : null);
+
   const chooseMethod = (id: string) => {
     completeStep(0, { booking_method: id });
     metaOnce("QuizQ1Answered", { booking_method: id });
+    // Q1 creates the lead row.
+    fireLead(sessionId, { booking_method: id, fbclid: fbclidRef.current, user_agent: ua() });
     setMethod(id);
     setHeadache(null); // re-branch headache list on a changed method
     setStep(1);
   };
   const chooseOther = () => {
-    completeStep(0, { booking_method: "other", other_system: otherSystem.trim() || undefined });
+    const other_system = otherSystem.trim() || undefined;
+    completeStep(0, { booking_method: "other", other_system });
     metaOnce("QuizQ1Answered", { booking_method: "other" });
+    // Q1 creates the lead row.
+    fireLead(sessionId, {
+      booking_method: "other",
+      other_system: other_system ?? null,
+      fbclid: fbclidRef.current,
+      user_agent: ua(),
+    });
     setMethod("other");
     setHeadache(null);
     setStep(1);
@@ -194,6 +213,7 @@ export default function QuizFlow() {
   const chooseHeadache = (h: string) => {
     completeStep(1, { headache: h });
     metaOnce("QuizQ2Answered", { headache: h });
+    fireLead(sessionId, { headache: h });
     setHeadache(h);
     setStep(2);
   };
@@ -201,13 +221,20 @@ export default function QuizFlow() {
     completeStep(2);
     setStep(3);
   };
-  const claimHandle = () => {
+  const claimHandle = async () => {
     completeStep(3);
     track("handle_claimed", { session_id: sessionId, handle: cleanHandle });
     metaOnce("HandleClaimed");
+    // Authoritative handle write — the one place we await, since a 23505 means
+    // the handle was taken since the live check and we must stay put.
+    const res = await postLead(sessionId, { handle: cleanHandle });
+    if (res.error === "handle_taken") {
+      setStatus("taken"); // "just got taken" — re-pick on the claim step
+      return;
+    }
     setStep(4);
   };
-  const reserveEmail = async () => {
+  const reserveEmail = () => {
     completeStep(4);
     // email_captured: keep raw email OFF the event; set it as a person property.
     track("email_captured", {
@@ -222,21 +249,8 @@ export default function QuizFlow() {
       metaFired.current.add("Lead");
       metaLead(email); // standard Lead + enables advanced matching for later events
     }
-
-    const res = await insertLead({
-      session_id: sessionId,
-      booking_method: method,
-      headache,
-      handle: cleanHandle,
-      email,
-      other_system: otherSystem.trim() || undefined,
-    });
-    if (res.duplicate) {
-      // Handle was taken between check and submit — send back to re-pick.
-      setStatus("taken");
-      setStep(3);
-      return;
-    }
+    // Handle uniqueness is already gated at the claim step; just record the email.
+    fireLead(sessionId, { email });
     setStep(SHOW_GIFT ? 5 : 6); // skip gift → straight to success when the gift step is off
   };
   const giftContinue = () => {
@@ -244,8 +258,27 @@ export default function QuizFlow() {
     setStep(6);
   };
   const downloadApp = () => {
-    track("store_cta_clicked", { session_id: sessionId, store: storeFromUA() });
-    metaOnce("AppDownloadClicked", { store: storeFromUA() });
+    const store = storeFromUA();
+    track("store_cta_clicked", { session_id: sessionId, store });
+    metaOnce("AppDownloadClicked", { store });
+    // keepalive (in postLead) lets this write survive the navigation below.
+    fireLead(sessionId, { clicked_download: true, download_store: store });
+
+    const af = (window as any).AF_SMART_SCRIPT;
+    const result = af?.generateOneLinkURL({
+      oneLinkURL: "https://barbr.onelink.me/uB0r",
+      afParameters: {
+        mediaSource: { keys: ["utm_source"], defaultValue: "any_source" },
+        campaign: { keys: ["utm_campaign"], defaultValue: "any_campaign" },
+        adSet: { keys: ["utm_adset"], defaultValue: "any_adset" },
+        ad: { keys: ["utm_ad"], defaultValue: "any_ad" },
+        channel: { keys: ["utm_medium"], defaultValue: "any_medium" },
+        afSub1: { keys: ["fbclid"] },
+        afCustom: [{ paramKey: "af_ss_ui", defaultValue: "true" }],
+      },
+    });
+
+    window.location.href = result?.clickURL ?? "https://barbr.onelink.me/uB0r";
   };
 
   // Back shown on every screen (Q1 → landing). Progress hidden on success.
@@ -306,7 +339,6 @@ export default function QuizFlow() {
           email={email}
           secs={secs}
           hhmmss={hhmmss}
-          onReplay={reset}
           onDownload={downloadApp}
         />
       )}
