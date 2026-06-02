@@ -32,6 +32,17 @@ const newSessionId = () => {
   return `s_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
 };
 
+// Ad attribution we read off the landing URL (Meta ad templates fill these:
+// utm_source={{campaign.name}}&utm_medium={{placement}}&utm_campaign=
+// {{adset.name}}&utm_content={{ad.name}}). utm_term included for completeness.
+const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
 /** Owns all funnel state + branching + analytics, renders the active step. */
 export default function QuizFlow() {
   // A/B toggle for the gift step. When false, the reserve step routes straight to
@@ -58,6 +69,8 @@ export default function QuizFlow() {
   const [sessionId] = useState(newSessionId);
   // fbclid captured once from the URL (persisted for the AppsFlyer afSub1 too).
   const fbclidRef = useRef<string | null>(null);
+  // UTM ad-attribution captured once from the URL (persisted across reloads).
+  const utmRef = useRef<Record<string, string>>({});
   const stepEnteredAt = useRef(Date.now());
   const startedRef = useRef(false);
   const completedRef = useRef(false);
@@ -88,19 +101,32 @@ export default function QuizFlow() {
     if (startedRef.current) return;
     startedRef.current = true;
     try {
-      const fromUrl = new URLSearchParams(window.location.search).get("fbclid");
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("fbclid");
       if (fromUrl) localStorage.setItem("fbclid", fromUrl);
       fbclidRef.current = fromUrl ?? localStorage.getItem("fbclid");
+      // UTMs: take the URL value on first touch, else a previously stored one,
+      // and persist so a reload mid-funnel doesn't drop attribution.
+      const utm: Record<string, string> = {};
+      for (const key of UTM_KEYS) {
+        const value = params.get(key) ?? localStorage.getItem(key);
+        if (value) {
+          utm[key] = value;
+          localStorage.setItem(key, value);
+        }
+      }
+      utmRef.current = utm;
     } catch {
       /* ignore */
     }
     track("quiz_started", { session_id: sessionId });
     metaOnce("QuizStarted");
     // Creates the lead row and opens the Slack thread for this session (later
-    // milestones reply under it). fbclid/user_agent give the parent ping context.
+    // milestones reply under it). fbclid/user_agent/UTMs give the parent ping
+    // its attribution context.
     fireLead(
       sessionId,
-      { fbclid: fbclidRef.current, user_agent: ua() },
+      { fbclid: fbclidRef.current, user_agent: ua(), ...utmRef.current },
       "quiz_started",
     );
   }, [sessionId]);

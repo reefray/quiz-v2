@@ -43,6 +43,11 @@ export interface LeadRow {
   handle?: string | null;
   email?: string | null;
   fbclid?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
   download_store?: string | null;
   slack_thread_ts?: string | null;
 }
@@ -77,6 +82,23 @@ const storeLabel = (store?: string | null): string => {
 
 const shortSession = (id: string): string => (id.length > 8 ? id.slice(0, 8) : id);
 
+// One context line summarising whatever UTM attribution rode in on the URL.
+// Skips any param that's blank, returns null when there's nothing to show.
+const UTM_FIELDS: readonly [keyof LeadRow, string][] = [
+  ["utm_source", "source"],
+  ["utm_medium", "medium"],
+  ["utm_campaign", "campaign"],
+  ["utm_content", "content"],
+  ["utm_term", "term"],
+];
+
+const utmLine = (row: LeadRow): string | null => {
+  const parts = UTM_FIELDS.filter(([key]) => row[key]).map(
+    ([key, label]) => `*${label}:* \`${row[key]}\``,
+  );
+  return parts.length ? `:dart: ${parts.join(" · ")}` : null;
+};
+
 type Block = Record<string, unknown>;
 
 interface Message {
@@ -98,13 +120,13 @@ function buildMessage(event: LeadEvent, row: LeadRow): Message {
   switch (event) {
     case "quiz_started": {
       const meta = row.fbclid ? " · 📣 from a Meta ad" : "";
-      return {
-        text: "🟢 New quiz session started",
-        blocks: [
-          section(":wave: *New quiz session started*"),
-          context(`\`${shortSession(row.session_id)}\`${meta}`),
-        ],
-      };
+      const blocks: Block[] = [
+        section(":wave: *New quiz session started*"),
+        context(`\`${shortSession(row.session_id)}\`${meta}`),
+      ];
+      const utm = utmLine(row);
+      if (utm) blocks.push(context(utm));
+      return { text: "🟢 New quiz session started", blocks };
     }
     case "q1_answered": {
       const label = bookingLabel(row.booking_method, row.other_system);
