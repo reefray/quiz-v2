@@ -14,6 +14,8 @@ export default function PostHogInit() {
       person_profiles: "identified_only",
       capture_pageview: true,
     });
+    // Snippet parity: expose for console debugging + flag overrides in testing.
+    (window as unknown as { posthog?: typeof posthog }).posthog = posthog;
   }, []);
   return null;
 }

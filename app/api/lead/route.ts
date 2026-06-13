@@ -24,6 +24,7 @@ const ALLOWED = new Set([
   "download_store",
   "answers",
   "user_agent",
+  "switcher_screen_variant",
 ]);
 
 export async function POST(req: Request) {

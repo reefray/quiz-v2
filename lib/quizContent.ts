@@ -151,6 +151,27 @@ export const REVEAL: Record<string, Reveal> = {
 export const TRANSFER_BODY =
   "We'll move your clients, services and reviews across for free — usually within 24 hours. No re-entering anything by hand, and you don't lose your setup.";
 
+/**
+ * Switcher migration-screen copy (A/B test `switcher-migration-screen`,
+ * Booksy/Fresha only). `platform` = 'Booksy' | 'Fresha'.
+ */
+export const MIGRATION = {
+  eyebrow: "Easy switch",
+  headline: (platform: string) => `We'll import all your data from ${platform} within 24 hours.`,
+  rows: (platform: string): Bullet[] => [
+    { emoji: "👥", text: "Your full client list — names, numbers, history" },
+    { emoji: "📅", text: "Every upcoming booking, exactly as scheduled" },
+    { emoji: "⭐", text: `All your ${platform} reviews and ratings, carried over` },
+  ],
+  review: {
+    quote: (platform: string) =>
+      `I switched to Barbr and the migration was seamless. They imported my entire client list from ${platform} in minutes — best decision for my business!`,
+    name: "James K.",
+    meta: "Barber · South London",
+  },
+  cta: "Continue",
+} as const;
+
 /** Handles already taken (demo availability check). */
 export const TAKEN = ["barber", "fades", "admin", "test", "barbr"];
 

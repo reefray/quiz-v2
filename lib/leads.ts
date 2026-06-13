@@ -32,6 +32,7 @@ export interface LeadFields {
   clicked_download?: boolean;
   download_store?: string | null;
   user_agent?: string | null;
+  switcher_screen_variant?: string | null;
 }
 
 export interface LeadResult {
