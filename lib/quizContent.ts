@@ -42,7 +42,6 @@ export const HEADACHES_DM: Headache[] = [
 export const HEADACHES_COMP: Headache[] = [
   { label: "Commission on clients I found myself", emoji: "🧾" },
   { label: "Fees that keep creeping up", emoji: "💸" },
-  { label: "Glitchy or clunky for clients", emoji: "🐛" },
   { label: "Pushing my clients to other barbers", emoji: "↪️" },
   { label: "No-shows & flakes", emoji: "👻" },
   { label: "Want more new clients", emoji: "📈" },
@@ -127,14 +126,6 @@ export const REVEAL: Record<string, Reveal> = {
       { emoji: "💷", text: "Flat £20/month — not a bill that creeps up" },
       { emoji: "🚫", text: "No new-client fees, no boost charges, nothing skimmed off the top" },
       { emoji: "💰", text: "Keep your prices, keep your money" },
-    ],
-  },
-  "Glitchy or clunky for clients": {
-    title: "Booking that just works",
-    bullets: [
-      { emoji: "👆", text: "Two taps to book — no account, no faff for your clients" },
-      { emoji: "⚡", text: "Fast and reliable, so you never look disorganised mid-cut" },
-      { emoji: "💬", text: "Fewer \"how do I book?\" messages landing on you" },
     ],
   },
   "Pushing my clients to other barbers": {
