@@ -26,6 +26,32 @@ export function setPerson(props: Props) {
   ph()?.setPersonProperties(props);
 }
 
+/** Super property attached to every subsequent event this session. */
+export function register(props: Props) {
+  ph()?.register(props);
+}
+
+/**
+ * Resolve a feature flag once flags are loaded, exactly once. Treats both a
+ * boolean flag (`true`) and an experiment variant (`'test'`) as enabled.
+ * `onFeatureFlags` fires immediately when flags are already in memory (they
+ * are by mid-funnel), so this normally resolves synchronously. Reading the
+ * flag logs PostHog's $feature_flag_called exposure — only call once the user
+ * qualifies for the experiment population. No-op when PostHog isn't loaded
+ * (caller keeps control behaviour).
+ */
+export function resolveFlag(flag: string, cb: (enabled: boolean) => void) {
+  const p = ph();
+  if (!p) return;
+  let done = false; // onFeatureFlags re-fires on every flags reload
+  p.onFeatureFlags(() => {
+    if (done) return;
+    done = true;
+    const value = p.getFeatureFlag(flag);
+    cb(value === true || value === "test");
+  });
+}
+
 // ── Meta Pixel ──
 type Fbq = (...args: unknown[]) => void;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;

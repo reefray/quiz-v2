@@ -9,8 +9,9 @@ import ClaimScreen, { type HandleStatus } from "./screens/ClaimScreen";
 import ReserveScreen from "./screens/ReserveScreen";
 import GiftScreen from "./screens/GiftScreen";
 import SuccessScreen from "./screens/SuccessScreen";
+import MigrationScreen from "./screens/MigrationScreen";
 import { TAKEN, COMP_METHODS } from "@/lib/quizContent";
-import { track, identify, setPerson, metaInitiateCheckout, metaTrackCustom, storeFromUA } from "@/lib/analytics";
+import { track, identify, setPerson, register, resolveFlag, metaInitiateCheckout, metaTrackCustom, storeFromUA } from "@/lib/analytics";
 import { fireLead, postLead, checkHandle } from "@/lib/leads";
 
 const HOLD_SECONDS = 24 * 3600 - 12;
@@ -22,7 +23,25 @@ const STEP_NAMES = [
   "reserve",
   "gift",
   "success",
+  "switcher_migration", // step 7 — appended so existing step numbers stay stable
 ] as const;
+
+/** PostHog flags for the two independent switcher-only A/B tests (both resolve
+ *  at the Q2 answer, switchers only — see chooseHeadache). */
+const MIGRATION_FLAG = "switcher-migration-screen"; // step-7 interstitial — ?mig override
+const OFFER_FLAG = "switcher-data-import-offer"; // success-page offer swap — ?imp override
+
+// Dev-only QA override — force an experiment variant via a query param where
+// PostHog isn't configured (local/preview). Compiled out of prod builds.
+const qaVariant = (param: string): "test" | "control" | null => {
+  if (process.env.NODE_ENV === "production") return null;
+  try {
+    const v = new URLSearchParams(window.location.search).get(param);
+    return v === "test" || v === "control" ? v : null;
+  } catch {
+    return null;
+  }
+};
 
 const cleanise = (h: string) =>
   h.trim().toLowerCase().replace(/[^a-z0-9._]/g, "");
@@ -52,8 +71,6 @@ export default function QuizFlow() {
   // for a per-user assignment (feature flag / experiment hook) — everything
   // downstream derives from it.
   const SHOW_GIFT: boolean = false;
-  // Step indices actually shown; gift (5) drops out when SHOW_GIFT is false.
-  const STEP_FLOW = SHOW_GIFT ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 6];
 
   const [step, setStep] = useState(0);
   const [method, setMethod] = useState<string | null>(null);
@@ -64,6 +81,44 @@ export default function QuizFlow() {
   const [email, setEmail] = useState("");
   const [secs, setSecs] = useState(HOLD_SECONDS);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Switcher migration-screen A/B test ──
+  // Variant resolves once, at the Q2 answer, and only for Booksy/Fresha — so
+  // PostHog's exposure population is switcher-only. 'test' shows step 7
+  // between reveal and claim; 'control'/null is today's flow.
+  const [migrationVariant, setMigrationVariant] = useState<"test" | "control" | null>(null);
+  const variantRef = useRef<"test" | "control" | null>(null);
+  const migrationShownRef = useRef(false);
+
+  // ── Switcher "free data import" offer A/B test (independent flag) ──
+  // Resolves alongside the migration flag at Q2, switchers only. 'test' swaps
+  // the success-page "Free Instagram ads" row for a platform-specific
+  // data-import promise; 'control'/null keeps today's offer.
+  const [offerVariant, setOfferVariant] = useState<"test" | "control" | null>(null);
+  const offerVariantRef = useRef<"test" | "control" | null>(null);
+
+  // Strictly Booksy/Fresha — 'other' is competitor-track but excluded from the test.
+  const isSwitcher = method === "booksy" || method === "fresha";
+  const platform = method === "fresha" ? "Fresha" : "Booksy";
+  // Control switchers (and unresolved-flag edge cases) skip the screen, so a
+  // late flag can never flash it in — flicker-safe by construction.
+  const showMigration = isSwitcher && migrationVariant === "test";
+  // Success-page offer swap: switchers on the 'test' arm of the offer flag.
+  const showDataImport = isSwitcher && offerVariant === "test";
+
+  // Step indices actually shown; migration (7) slots between reveal and claim
+  // on the test arm, gift (5) drops out when SHOW_GIFT is false. The progress
+  // denominator follows automatically.
+  const STEP_FLOW = [
+    0,
+    1,
+    2,
+    ...(showMigration ? [7] : []),
+    3,
+    4,
+    ...(SHOW_GIFT ? [5] : []),
+    6,
+  ];
 
   // ── Analytics session + timing ──
   const [sessionId] = useState(newSessionId);
@@ -135,6 +190,19 @@ export default function QuizFlow() {
   useEffect(() => {
     stepEnteredAt.current = Date.now();
   }, [step]);
+
+  // switcher_screen_shown — once, when the test-arm migration screen renders.
+  useEffect(() => {
+    if (step === 7 && !migrationShownRef.current) {
+      migrationShownRef.current = true;
+      track("switcher_screen_shown", {
+        session_id: sessionId,
+        platform,
+        variant: migrationVariant,
+        booking_method: method ?? undefined,
+      });
+    }
+  }, [step, sessionId, platform, migrationVariant, method]);
 
   // quiz_completed — when the success screen mounts.
   useEffect(() => {
@@ -253,11 +321,53 @@ export default function QuizFlow() {
     completeStep(1, { headache: h });
     metaOnce("QuizQ2Answered", { headache: h });
     fireLead(sessionId, { headache: h });
+    // A/B: read the migration-screen flag here — switchers only, once. The
+    // read logs PostHog's exposure, and flags are loaded well before Q2, so
+    // the variant is settled during the reveal dwell (no flicker at step 7).
+    if ((method === "booksy" || method === "fresha") && !variantRef.current) {
+      const assign = (variant: "test" | "control") => {
+        if (variantRef.current) return;
+        variantRef.current = variant;
+        setMigrationVariant(variant);
+        register({ switcher_screen_variant: variant }); // event property on everything after
+        setPerson({ switcher_screen_variant: variant });
+        fireLead(sessionId, { switcher_screen_variant: variant });
+      };
+      const forced = qaVariant("mig");
+      if (forced) assign(forced);
+      else resolveFlag(MIGRATION_FLAG, (enabled) => assign(enabled ? "test" : "control"));
+    }
+    // A/B: read the data-import offer flag here too — switchers only, once.
+    // Independent of the migration flag above (separate PostHog experiment), so
+    // a session can land on different arms of each.
+    if ((method === "booksy" || method === "fresha") && !offerVariantRef.current) {
+      const assign = (variant: "test" | "control") => {
+        if (offerVariantRef.current) return;
+        offerVariantRef.current = variant;
+        setOfferVariant(variant);
+        register({ data_import_offer_variant: variant }); // event property on everything after
+        setPerson({ data_import_offer_variant: variant });
+        fireLead(sessionId, { data_import_offer_variant: variant });
+      };
+      const forced = qaVariant("imp");
+      if (forced) assign(forced);
+      else resolveFlag(OFFER_FLAG, (enabled) => assign(enabled ? "test" : "control"));
+    }
     setHeadache(h);
     setStep(2);
   };
   const revealContinue = () => {
     completeStep(2);
+    setStep(showMigration ? 7 : 3);
+  };
+  const migrationContinue = () => {
+    completeStep(7);
+    track("switcher_screen_cta_clicked", {
+      session_id: sessionId,
+      platform,
+      variant: migrationVariant,
+      booking_method: method ?? undefined,
+    });
     setStep(3);
   };
   const claimHandle = async () => {
@@ -322,7 +432,7 @@ export default function QuizFlow() {
 
   // Back shown on every screen (Q1 → landing). Progress hidden on success.
   const showBack = true;
-  const showProgress = step < 6;
+  const showProgress = step !== 6; // step is an id, not an order — 7 sits mid-flow
 
   return (
     <QuizShell
@@ -349,6 +459,10 @@ export default function QuizFlow() {
 
       {step === 2 && headache && (
         <RevealScreen headache={headache} transferFrom={transferFrom} onContinue={revealContinue} />
+      )}
+
+      {step === 7 && (
+        <MigrationScreen platform={platform} onContinue={migrationContinue} />
       )}
 
       {step === 3 && (
@@ -379,6 +493,8 @@ export default function QuizFlow() {
           secs={secs}
           hhmmss={hhmmss}
           onDownload={downloadApp}
+          dataImport={showDataImport}
+          platform={platform}
         />
       )}
     </QuizShell>

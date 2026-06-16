@@ -141,3 +141,56 @@
 ## Lessons captured
 - See `lessons.md`: never `next build` while dev server runs (wipes `.next`,
   blanks the page) — use `npx tsc --noEmit` to type-check instead.
+
+## Phase 8: Switcher migration-screen A/B test (PostHog) — current
+
+Branch: `feat/ab-test-switcher-gift`. Reassurance interstitial for Booksy/Fresha
+switchers between the reveal and the claim-handle step, behind a 50/50 PostHog
+flag `switcher-migration-screen`. Control = current flow. Primary metric =
+`handle_claimed` rate among exposed switchers.
+
+- [x] Supabase migration: `switcher_screen_variant text` on `leads` (NOT yet applied to prod DB)
+- [x] `/api/lead` ALLOWED + `LeadFields`: allow `switcher_screen_variant`
+- [x] `analytics.ts`: `resolveFlag` (onFeatureFlags, once, boolean/'test' tolerant) + `register`
+- [x] `quizContent.ts`: MIGRATION copy (platform-dynamic)
+- [x] `MigrationScreen.tsx`: check rows, review card (JK initials avatar), CTA + "later" link
+- [x] `QuizFlow.tsx`: step 7 wiring — flag read gated on booksy/fresha at Q2 answer;
+      variant → state, DB, person+event props; reveal → migration → claim routing;
+      `switcher_screen_shown` / `switcher_screen_cta_clicked` events
+- [x] Verify: typecheck clean + preview walk of all paths (see Review)
+- [x] PostHog: experiment 83565 in "Quiz funnel" project (id 189975) — DRAFT, launch on deploy
+
+### Decisions
+- Screen sits after the reveal (spec said "after Q2" but the reveal lives there);
+  this puts reassurance right before the handle step where the drop-off is.
+- Flag read only for booksy/fresha at Q2 answer via `onFeatureFlags` — exposure
+  population stays switcher-only; resolves during reveal dwell so no flicker.
+  Unresolved when leaving reveal (edge) → control behaviour.
+- `other` excluded per spec despite being competitor-track.
+- No James K. image asset in this repo — review card uses initials avatar.
+
+### Review (Phase 8)
+- Verified in preview (dev QA override `?mig=test|control`, since no .env.local →
+  PostHog inert locally):
+  - Test arm (Booksy): Q1 → Q2 → reveal → migration → claim → reserve → success,
+    zero JS errors; back nav claim → migration → reveal correct.
+  - Test arm (Fresha): all three {platform} tokens resolve; "later" link advances.
+  - Control arm + non-switcher (DMs, even with ?mig=test): straight reveal → claim,
+    flow byte-identical to today.
+  - `/api/lead` POST carries `{switcher_screen_variant: "test"}` once per session.
+- PostHog (project "Quiz funnel" 189975): experiment **83565** on flag
+  `switcher-migration-screen` (id 205049), control/test 50/50, 100% rollout.
+  Primary metric: handle_claimed funnel; secondary: email_captured,
+  store_cta_clicked. Status DRAFT — **launch after deploy**.
+- `PostHogInit` now exposes `window.posthog` (snippet parity, enables console
+  flag overrides for QA).
+- switcher_screen_shown is exposure-adjacent but NOT the experiment metric start
+  (control never fires it); PostHog uses $feature_flag_called exposure, which we
+  gate switcher-only in code.
+
+### Still needs the user (not code)
+- Apply supabase/migrations/20260612000000_add_switcher_screen_variant.sql to prod
+  (or `supabase db push`).
+- Deploy, then LAUNCH experiment 83565 in PostHog (it's in draft; flag serves
+  nothing until launched — control behaviour everywhere).
+- Commit on feat/ab-test-switcher-gift when happy.

@@ -42,7 +42,6 @@ export const HEADACHES_DM: Headache[] = [
 export const HEADACHES_COMP: Headache[] = [
   { label: "Commission on clients I found myself", emoji: "🧾" },
   { label: "Fees that keep creeping up", emoji: "💸" },
-  { label: "Glitchy or clunky for clients", emoji: "🐛" },
   { label: "Pushing my clients to other barbers", emoji: "↪️" },
   { label: "No-shows & flakes", emoji: "👻" },
   { label: "Want more new clients", emoji: "📈" },
@@ -129,14 +128,6 @@ export const REVEAL: Record<string, Reveal> = {
       { emoji: "💰", text: "Keep your prices, keep your money" },
     ],
   },
-  "Glitchy or clunky for clients": {
-    title: "Booking that just works",
-    bullets: [
-      { emoji: "👆", text: "Two taps to book — no account, no faff for your clients" },
-      { emoji: "⚡", text: "Fast and reliable, so you never look disorganised mid-cut" },
-      { emoji: "💬", text: "Fewer \"how do I book?\" messages landing on you" },
-    ],
-  },
   "Pushing my clients to other barbers": {
     title: "No competitors on your page",
     bullets: [
@@ -150,6 +141,27 @@ export const REVEAL: Record<string, Reveal> = {
 /** Free-transfer card body (competitor track only). */
 export const TRANSFER_BODY =
   "We'll move your clients, services and reviews across for free — usually within 24 hours. No re-entering anything by hand, and you don't lose your setup.";
+
+/**
+ * Switcher migration-screen copy (A/B test `switcher-migration-screen`,
+ * Booksy/Fresha only). `platform` = 'Booksy' | 'Fresha'.
+ */
+export const MIGRATION = {
+  eyebrow: "Easy switch",
+  headline: (platform: string) => `We'll import all your data from ${platform} within 24 hours.`,
+  rows: (platform: string): Bullet[] => [
+    { emoji: "👥", text: "Your full client list — names, numbers, history" },
+    { emoji: "📅", text: "Every upcoming booking, exactly as scheduled" },
+    { emoji: "⭐", text: `All your ${platform} reviews and ratings, carried over` },
+  ],
+  review: {
+    quote: (platform: string) =>
+      `I switched to Barbr and the migration was seamless. They imported my entire client list from ${platform} in minutes — best decision for my business!`,
+    name: "James K.",
+    meta: "Barber · South London",
+  },
+  cta: "Continue",
+} as const;
 
 /** Handles already taken (demo availability check). */
 export const TAKEN = ["barber", "fades", "admin", "test", "barbr"];
