@@ -33,6 +33,7 @@ export interface LeadFields {
   download_store?: string | null;
   user_agent?: string | null;
   switcher_screen_variant?: string | null;
+  data_import_offer_variant?: string | null;
 }
 
 export interface LeadResult {

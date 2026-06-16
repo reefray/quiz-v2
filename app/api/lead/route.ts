@@ -25,6 +25,7 @@ const ALLOWED = new Set([
   "answers",
   "user_agent",
   "switcher_screen_variant",
+  "data_import_offer_variant",
 ]);
 
 export async function POST(req: Request) {

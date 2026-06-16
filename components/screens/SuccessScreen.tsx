@@ -27,12 +27,18 @@ export default function SuccessScreen({
   secs,
   hhmmss,
   onDownload,
+  dataImport = false,
+  platform = "Booksy",
 }: {
   cleanHandle: string;
   email: string;
   secs: number;
   hhmmss: (t: number) => string;
   onDownload: () => void;
+  /** A/B test arm: swap the "Free Instagram ads" row for a data-import promise. */
+  dataImport?: boolean;
+  /** 'Booksy' | 'Fresha' — names the source the data is imported from. */
+  platform?: string;
 }) {
   // Lock starts open and snaps shut shortly after mount.
   const [locked, setLocked] = useState(false);
@@ -96,10 +102,17 @@ export default function SuccessScreen({
 
         <div className="mt-3 flex flex-col gap-3">
           <WaitingRow title="Your booking link" note="— go live in under 5 min" />
-          <WaitingRow
-            title="Free Instagram ads"
-            note="— 5 ready to post graphics promoting your new booking link"
-          />
+          {dataImport ? (
+            <WaitingRow
+              title="Free data import"
+              note={`— we'll personally import all your data from ${platform}`}
+            />
+          ) : (
+            <WaitingRow
+              title="Free Instagram ads"
+              note="— 5 ready to post graphics promoting your new booking link"
+            />
+          )}
           <WaitingRow
             title="One-to-one support"
             note="— live chat with us any time for help and support"

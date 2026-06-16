@@ -26,15 +26,17 @@ const STEP_NAMES = [
   "switcher_migration", // step 7 — appended so existing step numbers stay stable
 ] as const;
 
-/** PostHog flag for the switcher migration-screen A/B test. */
-const MIGRATION_FLAG = "switcher-migration-screen";
+/** PostHog flags for the two independent switcher-only A/B tests (both resolve
+ *  at the Q2 answer, switchers only — see chooseHeadache). */
+const MIGRATION_FLAG = "switcher-migration-screen"; // step-7 interstitial — ?mig override
+const OFFER_FLAG = "switcher-data-import-offer"; // success-page offer swap — ?imp override
 
-// Dev-only QA override (?mig=test|control) — lets the variant be forced where
+// Dev-only QA override — force an experiment variant via a query param where
 // PostHog isn't configured (local/preview). Compiled out of prod builds.
-const qaMigrationVariant = (): "test" | "control" | null => {
+const qaVariant = (param: string): "test" | "control" | null => {
   if (process.env.NODE_ENV === "production") return null;
   try {
-    const v = new URLSearchParams(window.location.search).get("mig");
+    const v = new URLSearchParams(window.location.search).get(param);
     return v === "test" || v === "control" ? v : null;
   } catch {
     return null;
@@ -88,12 +90,21 @@ export default function QuizFlow() {
   const variantRef = useRef<"test" | "control" | null>(null);
   const migrationShownRef = useRef(false);
 
+  // ── Switcher "free data import" offer A/B test (independent flag) ──
+  // Resolves alongside the migration flag at Q2, switchers only. 'test' swaps
+  // the success-page "Free Instagram ads" row for a platform-specific
+  // data-import promise; 'control'/null keeps today's offer.
+  const [offerVariant, setOfferVariant] = useState<"test" | "control" | null>(null);
+  const offerVariantRef = useRef<"test" | "control" | null>(null);
+
   // Strictly Booksy/Fresha — 'other' is competitor-track but excluded from the test.
   const isSwitcher = method === "booksy" || method === "fresha";
   const platform = method === "fresha" ? "Fresha" : "Booksy";
   // Control switchers (and unresolved-flag edge cases) skip the screen, so a
   // late flag can never flash it in — flicker-safe by construction.
   const showMigration = isSwitcher && migrationVariant === "test";
+  // Success-page offer swap: switchers on the 'test' arm of the offer flag.
+  const showDataImport = isSwitcher && offerVariant === "test";
 
   // Step indices actually shown; migration (7) slots between reveal and claim
   // on the test arm, gift (5) drops out when SHOW_GIFT is false. The progress
@@ -322,9 +333,25 @@ export default function QuizFlow() {
         setPerson({ switcher_screen_variant: variant });
         fireLead(sessionId, { switcher_screen_variant: variant });
       };
-      const forced = qaMigrationVariant();
+      const forced = qaVariant("mig");
       if (forced) assign(forced);
       else resolveFlag(MIGRATION_FLAG, (enabled) => assign(enabled ? "test" : "control"));
+    }
+    // A/B: read the data-import offer flag here too — switchers only, once.
+    // Independent of the migration flag above (separate PostHog experiment), so
+    // a session can land on different arms of each.
+    if ((method === "booksy" || method === "fresha") && !offerVariantRef.current) {
+      const assign = (variant: "test" | "control") => {
+        if (offerVariantRef.current) return;
+        offerVariantRef.current = variant;
+        setOfferVariant(variant);
+        register({ data_import_offer_variant: variant }); // event property on everything after
+        setPerson({ data_import_offer_variant: variant });
+        fireLead(sessionId, { data_import_offer_variant: variant });
+      };
+      const forced = qaVariant("imp");
+      if (forced) assign(forced);
+      else resolveFlag(OFFER_FLAG, (enabled) => assign(enabled ? "test" : "control"));
     }
     setHeadache(h);
     setStep(2);
@@ -466,6 +493,8 @@ export default function QuizFlow() {
           secs={secs}
           hhmmss={hhmmss}
           onDownload={downloadApp}
+          dataImport={showDataImport}
+          platform={platform}
         />
       )}
     </QuizShell>
