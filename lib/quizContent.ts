@@ -30,12 +30,12 @@ export interface Headache {
 
 /** Headache options — DM track. */
 export const HEADACHES_DM: Headache[] = [
-  { label: "No-shows & flakes", emoji: "👻" },
+  { label: "Want more new clients", emoji: "📈" },
   { label: "Endless back-and-forth", emoji: "🔁" },
   { label: "Drowning in DMs", emoji: "🌊" },
   { label: "Looking unprofessional", emoji: "😬" },
   { label: "Empty gaps in my day", emoji: "🪑" },
-  { label: "Want more new clients", emoji: "📈" },
+  { label: "No-shows & flakes", emoji: "👻" },
 ];
 
 /** Headache options — competitor track (Booksy / Fresha / Other). */
